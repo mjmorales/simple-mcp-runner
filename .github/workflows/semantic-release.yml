@@ -40,7 +40,7 @@ jobs:
           go test ./...
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run semantic-release
         env:

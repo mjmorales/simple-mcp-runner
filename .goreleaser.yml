@@ -1,5 +1,4 @@
-# GoReleaser configuration - using default version (1.0)
-# See: https://goreleaser.com/migration-guide/
+version: 2
 
 before:
   hooks:
