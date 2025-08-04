@@ -25,7 +25,6 @@ type Executor struct {
 	config         *config.Config
 	logger         *logger.Logger
 	activeCommands int32
-	mu             sync.RWMutex
 	semaphore      chan struct{}
 }
 

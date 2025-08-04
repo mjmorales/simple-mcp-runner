@@ -160,12 +160,7 @@ func (d *Discoverer) discoverInPaths(ctx context.Context, paths []string, req *t
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			cmds, err := d.discoverInPath(p, req)
-			if err != nil {
-				d.logger.WithError(err).WithField("path", p).Debug("failed to discover in path")
-				// Don't fail the whole operation for individual path errors
-				return
-			}
+			cmds := d.discoverInPath(p, req)
 
 			mu.Lock()
 			commands = append(commands, cmds...)
@@ -187,11 +182,11 @@ func (d *Discoverer) discoverInPaths(ctx context.Context, paths []string, req *t
 }
 
 // discoverInPath discovers commands in a single path.
-func (d *Discoverer) discoverInPath(path string, req *types.CommandDiscoveryRequest) ([]types.CommandInfo, error) {
+func (d *Discoverer) discoverInPath(path string, req *types.CommandDiscoveryRequest) []types.CommandInfo {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		// Path might not exist or be inaccessible
-		return nil, nil
+		return nil
 	}
 
 	var commands []types.CommandInfo
@@ -239,7 +234,7 @@ func (d *Discoverer) discoverInPath(path string, req *types.CommandDiscoveryRequ
 		commands = append(commands, cmd)
 	}
 
-	return commands, nil
+	return commands
 }
 
 // matchesPattern checks if a command name matches the pattern.
