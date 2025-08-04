@@ -1,0 +1,70 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - gosec
+    - gofmt
+    - goimports
+    - misspell
+    - unconvert
+    - prealloc
+    - nakedret
+    - exhaustive
+    - godot
+    - nolintlint
+    - revive
+    - errorlint
+    - gocritic
+    - gocyclo
+    - dupl
+
+linters-settings:
+  govet:
+    check-shadowing: true
+  gocyclo:
+    min-complexity: 15
+  dupl:
+    threshold: 100
+  misspell:
+    locale: US
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: true
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+  errorlint:
+    errorf: true
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - dupl
+        - gosec
+    - path: cmd/
+      linters:
+        - gocyclo
+    - linters:
+        - staticcheck
+      text: "SA9003:"
+  fix: true
