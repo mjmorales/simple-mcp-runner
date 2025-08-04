@@ -62,6 +62,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	// Write config file
+	// #nosec G306 - Configuration file needs to be readable by the user
 	if err := os.WriteFile(configPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}

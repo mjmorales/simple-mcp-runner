@@ -237,6 +237,7 @@ func (e *Executor) executeCommand(ctx context.Context, req *types.CommandExecuti
 	}
 
 	// Create command
+	// #nosec G204 - This tool's purpose is to execute user-provided commands
 	cmd := exec.CommandContext(ctx, req.Command, req.Args...)
 
 	// Set working directory

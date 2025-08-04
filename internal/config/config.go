@@ -180,6 +180,7 @@ func Load(filename string) (*Config, error) {
 	}
 
 	// Read file
+	// #nosec G304 - Configuration files are loaded from user-specified paths
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, apperrors.Wrap(err, apperrors.ErrorTypeConfiguration, "failed to read config file")
