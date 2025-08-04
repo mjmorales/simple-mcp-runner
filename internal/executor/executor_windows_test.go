@@ -22,6 +22,7 @@ func getTimeoutTestCase() testCase {
 				t.Error("expected command to timeout")
 			}
 			if result.ErrorMessage != "command timed out" {
+				t.Logf("result.ErrorMessage: %s", result.ErrorMessage)
 				t.Errorf("expected timeout error message, got %s", result.ErrorMessage)
 			}
 		},
