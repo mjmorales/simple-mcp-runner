@@ -3,7 +3,7 @@ package types
 
 import "time"
 
-// CommandInfo represents information about a discovered command
+// CommandInfo represents information about a discovered command.
 type CommandInfo struct {
 	Name        string `json:"name"`
 	Path        string `json:"path"`
@@ -11,7 +11,7 @@ type CommandInfo struct {
 	Executable  bool   `json:"executable"`
 }
 
-// CommandExecutionRequest represents a request to execute a command
+// CommandExecutionRequest represents a request to execute a command.
 type CommandExecutionRequest struct {
 	Command string   `json:"command"`
 	Args    []string `json:"args,omitempty"`
@@ -20,7 +20,7 @@ type CommandExecutionRequest struct {
 	Timeout string   `json:"timeout,omitempty"` // Duration string like "30s"
 }
 
-// CommandExecutionResult represents the result of command execution
+// CommandExecutionResult represents the result of command execution.
 type CommandExecutionResult struct {
 	Stdout       string        `json:"stdout"`
 	Stderr       string        `json:"stderr"`
@@ -32,15 +32,15 @@ type CommandExecutionResult struct {
 	ErrorMessage string        `json:"error_message,omitempty"`
 }
 
-// CommandDiscoveryRequest represents a request to discover commands
+// CommandDiscoveryRequest represents a request to discover commands.
 type CommandDiscoveryRequest struct {
 	Pattern     string   `json:"pattern,omitempty"`
-	Paths       []string `json:"paths,omitempty"`      // Additional paths to search
-	MaxResults  int      `json:"max_results,omitempty"` // Limit number of results
+	Paths       []string `json:"paths,omitempty"`        // Additional paths to search
+	MaxResults  int      `json:"max_results,omitempty"`  // Limit number of results
 	IncludeDesc bool     `json:"include_desc,omitempty"` // Include descriptions
 }
 
-// CommandDiscoveryResult represents the result of command discovery
+// CommandDiscoveryResult represents the result of command discovery.
 type CommandDiscoveryResult struct {
 	Commands    []CommandInfo `json:"commands"`
 	TotalFound  int           `json:"total_found"`

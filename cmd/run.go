@@ -17,7 +17,7 @@ var (
 	logFormat  string
 )
 
-// runCmd represents the run command
+// runCmd represents the run command.
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run the MCP server",
@@ -48,13 +48,13 @@ func init() {
 
 	// Configuration flags
 	runCmd.Flags().StringVarP(&configFile, "config", "c", "", "path to configuration file (uses defaults if not specified)")
-	
+
 	// Logging flags
 	runCmd.Flags().StringVar(&logLevel, "log-level", "info", "log level (debug, info, warn, error)")
 	runCmd.Flags().StringVar(&logFormat, "log-format", "text", "log format (text, json)")
 }
 
-// runServer runs the MCP server
+// runServer runs the MCP server.
 func runServer(cmd *cobra.Command, args []string) error {
 	// Setup logger
 	logOpts := logger.Options{
@@ -63,7 +63,7 @@ func runServer(cmd *cobra.Command, args []string) error {
 		Output:     os.Stderr,
 		AddSource:  logLevel == "debug",
 	}
-	
+
 	log, err := logger.New(logOpts)
 	if err != nil {
 		return fmt.Errorf("failed to setup logger: %w", err)

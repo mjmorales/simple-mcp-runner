@@ -3,6 +3,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -12,45 +13,45 @@ import (
 
 	"github.com/mjmorales/simple-mcp-runner/internal/config"
 	"github.com/mjmorales/simple-mcp-runner/internal/discovery"
-	"github.com/mjmorales/simple-mcp-runner/internal/errors"
+	apperrors "github.com/mjmorales/simple-mcp-runner/internal/errors"
 	"github.com/mjmorales/simple-mcp-runner/internal/executor"
 	"github.com/mjmorales/simple-mcp-runner/internal/logger"
 	"github.com/mjmorales/simple-mcp-runner/pkg/types"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// Server represents the MCP server
+// Server represents the MCP server.
 type Server struct {
 	config     *config.Config
 	logger     *logger.Logger
 	executor   *executor.Executor
 	discoverer *discovery.Discoverer
 	mcpServer  *mcp.Server
-	
+
 	mu       sync.RWMutex
 	running  bool
 	shutdown chan struct{}
 }
 
-// Options for creating a new server
+// Options for creating a new server.
 type Options struct {
 	Config *config.Config
 	Logger *logger.Logger
 }
 
-// New creates a new MCP server instance
+// New creates a new MCP server instance.
 func New(opts Options) (*Server, error) {
 	if opts.Config == nil {
-		return nil, errors.ConfigurationError("config is required")
+		return nil, apperrors.ConfigurationError("config is required")
 	}
-	
+
 	if opts.Logger == nil {
 		opts.Logger = logger.Default()
 	}
 
 	// Create executor
 	exec := executor.New(opts.Config, opts.Logger)
-	
+
 	// Create discoverer
 	disc := discovery.New(opts.Config, opts.Logger)
 
@@ -74,18 +75,18 @@ func New(opts Options) (*Server, error) {
 
 	// Register tools
 	if err := s.registerTools(); err != nil {
-		return nil, errors.Wrap(err, errors.ErrorTypeConfiguration, "failed to register tools")
+		return nil, apperrors.Wrap(err, apperrors.ErrorTypeConfiguration, "failed to register tools")
 	}
 
 	return s, nil
 }
 
-// Run starts the MCP server
+// Run starts the MCP server.
 func (s *Server) Run(ctx context.Context) error {
 	s.mu.Lock()
 	if s.running {
 		s.mu.Unlock()
-		return errors.InternalError("server is already running")
+		return apperrors.InternalError("server is already running")
 	}
 	s.running = true
 	s.mu.Unlock()
@@ -127,25 +128,25 @@ func (s *Server) Run(ctx context.Context) error {
 		s.logger.Info("received shutdown signal", "signal", sig)
 		s.shutdown <- struct{}{}
 		cancel()
-		
+
 		// Wait for graceful shutdown with timeout
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer shutdownCancel()
-		
+
 		select {
 		case err := <-errChan:
-			if err != nil && err != context.Canceled {
-				return errors.Wrap(err, errors.ErrorTypeInternal, "server error during shutdown")
+			if err != nil && !errors.Is(err, context.Canceled) {
+				return apperrors.Wrap(err, apperrors.ErrorTypeInternal, "server error during shutdown")
 			}
 		case <-shutdownCtx.Done():
 			s.logger.Warn("shutdown timeout exceeded")
 		}
-		
+
 	case err := <-errChan:
 		if err != nil {
-			return errors.Wrap(err, errors.ErrorTypeInternal, "server error")
+			return apperrors.Wrap(err, apperrors.ErrorTypeInternal, "server error")
 		}
-		
+
 	case <-ctx.Done():
 		s.logger.Info("context cancelled")
 		return ctx.Err()
@@ -155,7 +156,7 @@ func (s *Server) Run(ctx context.Context) error {
 	return nil
 }
 
-// Shutdown gracefully shuts down the server
+// Shutdown gracefully shuts down the server.
 func (s *Server) Shutdown(ctx context.Context) error {
 	s.mu.RLock()
 	running := s.running
@@ -166,7 +167,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	}
 
 	s.logger.Info("shutting down MCP server")
-	
+
 	// Signal shutdown
 	select {
 	case s.shutdown <- struct{}{}:
@@ -180,32 +181,32 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		s.mu.RLock()
 		running = s.running
 		s.mu.RUnlock()
-		
+
 		if !running {
 			break
 		}
-		
+
 		if time.Now().After(deadline) {
-			return errors.TimeoutError("shutdown timeout", "10s")
+			return apperrors.TimeoutError("shutdown timeout", "10s")
 		}
-		
+
 		time.Sleep(100 * time.Millisecond)
 	}
 
 	return nil
 }
 
-// createTransport creates the appropriate transport based on configuration
+// createTransport creates the appropriate transport based on configuration.
 func (s *Server) createTransport() (mcp.Transport, error) {
 	switch s.config.Transport {
 	case "stdio":
 		return mcp.NewStdioTransport(), nil
 	default:
-		return nil, errors.ConfigurationError(fmt.Sprintf("unsupported transport: %s", s.config.Transport))
+		return nil, apperrors.ConfigurationError(fmt.Sprintf("unsupported transport: %s", s.config.Transport))
 	}
 }
 
-// registerTools registers all MCP tools
+// registerTools registers all MCP tools.
 func (s *Server) registerTools() error {
 	// Register configured commands
 	for _, cmd := range s.config.Commands {
@@ -227,11 +228,11 @@ func (s *Server) registerTools() error {
 	return nil
 }
 
-// registerConfigCommand registers a configured command as a tool
+// registerConfigCommand registers a configured command as a tool.
 func (s *Server) registerConfigCommand(cmd config.Command) error {
 	// Create a copy of cmd for the closure
 	cmdCopy := cmd
-	
+
 	tool := &mcp.Tool{
 		Name:        cmd.Name,
 		Description: cmd.Description,
@@ -244,7 +245,7 @@ func (s *Server) registerConfigCommand(cmd config.Command) error {
 			s.logger.WithError(err).Error("config command execution failed",
 				"command", cmdCopy.Name,
 			)
-			
+
 			// Return error result instead of failing
 			return &mcp.CallToolResultFor[types.CommandExecutionResult]{
 				StructuredContent: types.CommandExecutionResult{
@@ -262,16 +263,16 @@ func (s *Server) registerConfigCommand(cmd config.Command) error {
 	}
 
 	mcp.AddTool(s.mcpServer, tool, handler)
-	
+
 	s.logger.Debug("registered config command tool",
 		"name", cmd.Name,
 		"command", cmd.Command,
 	)
-	
+
 	return nil
 }
 
-// registerDiscoveryTool registers the command discovery tool
+// registerDiscoveryTool registers the command discovery tool.
 func (s *Server) registerDiscoveryTool() error {
 	tool := &mcp.Tool{
 		Name:        "discover_commands",
@@ -291,13 +292,13 @@ func (s *Server) registerDiscoveryTool() error {
 	}
 
 	mcp.AddTool(s.mcpServer, tool, handler)
-	
+
 	s.logger.Debug("registered discovery tool")
-	
+
 	return nil
 }
 
-// registerExecutionTool registers the command execution tool
+// registerExecutionTool registers the command execution tool.
 func (s *Server) registerExecutionTool() error {
 	tool := &mcp.Tool{
 		Name:        "execute_command",
@@ -315,7 +316,7 @@ func (s *Server) registerExecutionTool() error {
 		result, err := s.executor.Execute(ctx, &params.Arguments)
 		if err != nil {
 			s.logger.WithError(err).Error("command execution failed")
-			
+
 			// Return error result instead of failing
 			return &mcp.CallToolResultFor[types.CommandExecutionResult]{
 				StructuredContent: types.CommandExecutionResult{
@@ -333,13 +334,13 @@ func (s *Server) registerExecutionTool() error {
 	}
 
 	mcp.AddTool(s.mcpServer, tool, handler)
-	
+
 	s.logger.Debug("registered execution tool")
-	
+
 	return nil
 }
 
-// GetStats returns server statistics
+// GetStats returns server statistics.
 func (s *Server) GetStats() ServerStats {
 	return ServerStats{
 		Running:        s.IsRunning(),
@@ -347,20 +348,20 @@ func (s *Server) GetStats() ServerStats {
 	}
 }
 
-// IsRunning returns true if the server is running
+// IsRunning returns true if the server is running.
 func (s *Server) IsRunning() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.running
 }
 
-// ServerStats contains server statistics
+// ServerStats contains server statistics.
 type ServerStats struct {
 	Running        bool
 	ActiveCommands int
 }
 
-// ConfigCommandParams represents parameters for configured commands
+// ConfigCommandParams represents parameters for configured commands.
 type ConfigCommandParams struct {
 	WorkDir string   `json:"workdir,omitempty"`
 	Args    []string `json:"args,omitempty"` // Only if AllowArgs is true

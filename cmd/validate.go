@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// validateCmd represents the validate command
+// validateCmd represents the validate command.
 var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Validate configuration file",
@@ -46,7 +46,7 @@ Example:
 		fmt.Printf("  Application: %s\n", cfg.App)
 		fmt.Printf("  Transport: %s\n", cfg.Transport)
 		fmt.Printf("  Commands: %d defined\n", len(cfg.Commands))
-		
+
 		if len(cfg.Commands) > 0 {
 			fmt.Printf("\n  Configured commands:\n")
 			for _, cmd := range cfg.Commands {
@@ -82,5 +82,8 @@ func init() {
 
 	// Add config flag
 	validateCmd.Flags().StringP("config", "c", "", "path to configuration file")
-	validateCmd.MarkFlagRequired("config")
+	if err := validateCmd.MarkFlagRequired("config"); err != nil {
+		// This should never fail for a valid flag name
+		panic(fmt.Sprintf("failed to mark config flag as required: %v", err))
+	}
 }

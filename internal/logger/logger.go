@@ -12,13 +12,13 @@ import (
 	"time"
 )
 
-// Logger wraps slog.Logger with application-specific functionality
+// Logger wraps slog.Logger with application-specific functionality.
 type Logger struct {
 	*slog.Logger
 	level slog.Level
 }
 
-// Options configures the logger
+// Options configures the logger.
 type Options struct {
 	Level      string
 	Output     io.Writer
@@ -26,7 +26,7 @@ type Options struct {
 	AddSource  bool
 }
 
-// DefaultOptions returns default logger options
+// DefaultOptions returns default logger options.
 func DefaultOptions() Options {
 	return Options{
 		Level:      "info",
@@ -36,7 +36,7 @@ func DefaultOptions() Options {
 	}
 }
 
-// New creates a new logger instance
+// New creates a new logger instance.
 func New(opts Options) (*Logger, error) {
 	level, err := parseLevel(opts.Level)
 	if err != nil {
@@ -76,15 +76,15 @@ func New(opts Options) (*Logger, error) {
 	}, nil
 }
 
-// WithContext returns a logger with context values
+// WithContext returns a logger with context values.
 func (l *Logger) WithContext(ctx context.Context) *Logger {
 	// Extract request ID or trace ID from context if available
 	attrs := []slog.Attr{}
-	
+
 	if reqID := ctx.Value("request_id"); reqID != nil {
 		attrs = append(attrs, slog.String("request_id", fmt.Sprint(reqID)))
 	}
-	
+
 	if traceID := ctx.Value("trace_id"); traceID != nil {
 		attrs = append(attrs, slog.String("trace_id", fmt.Sprint(traceID)))
 	}
@@ -105,7 +105,7 @@ func (l *Logger) WithContext(ctx context.Context) *Logger {
 	}
 }
 
-// WithError adds an error to the logger
+// WithError adds an error to the logger.
 func (l *Logger) WithError(err error) *Logger {
 	return &Logger{
 		Logger: l.With(slog.String("error", err.Error())),
@@ -113,7 +113,7 @@ func (l *Logger) WithError(err error) *Logger {
 	}
 }
 
-// WithField adds a field to the logger
+// WithField adds a field to the logger.
 func (l *Logger) WithField(key string, value any) *Logger {
 	return &Logger{
 		Logger: l.With(slog.Any(key, value)),
@@ -121,7 +121,7 @@ func (l *Logger) WithField(key string, value any) *Logger {
 	}
 }
 
-// WithFields adds multiple fields to the logger
+// WithFields adds multiple fields to the logger.
 func (l *Logger) WithFields(fields map[string]any) *Logger {
 	attrs := make([]any, 0, len(fields)*2)
 	for k, v := range fields {
@@ -133,18 +133,18 @@ func (l *Logger) WithFields(fields map[string]any) *Logger {
 	}
 }
 
-// IsDebugEnabled returns true if debug logging is enabled
+// IsDebugEnabled returns true if debug logging is enabled.
 func (l *Logger) IsDebugEnabled() bool {
 	return l.level <= slog.LevelDebug
 }
 
-// Fatal logs at error level and exits
+// Fatal logs at error level and exits.
 func (l *Logger) Fatal(msg string, args ...any) {
 	l.Error(msg, args...)
 	os.Exit(1)
 }
 
-// parseLevel converts a string level to slog.Level
+// parseLevel converts a string level to slog.Level.
 func parseLevel(level string) (slog.Level, error) {
 	switch strings.ToLower(level) {
 	case "debug":
@@ -160,14 +160,14 @@ func parseLevel(level string) (slog.Level, error) {
 	}
 }
 
-// trimPath removes the project path prefix for cleaner source locations
+// trimPath removes the project path prefix for cleaner source locations.
 func trimPath(path string) string {
 	// Get the directory of the current file
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
 		return path
 	}
-	
+
 	// Find project root (where go.mod is)
 	parts := strings.Split(file, "/")
 	for i := len(parts) - 1; i >= 0; i-- {
@@ -176,11 +176,11 @@ func trimPath(path string) string {
 			return strings.TrimPrefix(path, prefix)
 		}
 	}
-	
+
 	return path
 }
 
-// Default logger instance
+// Default logger instance.
 var defaultLogger *Logger
 
 func init() {
@@ -191,12 +191,12 @@ func init() {
 	}
 }
 
-// Default returns the default logger instance
+// Default returns the default logger instance.
 func Default() *Logger {
 	return defaultLogger
 }
 
-// SetDefault sets the default logger instance
+// SetDefault sets the default logger instance.
 func SetDefault(l *Logger) {
 	defaultLogger = l
 }

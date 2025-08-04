@@ -11,18 +11,20 @@ import (
 	"github.com/mjmorales/simple-mcp-runner/pkg/types"
 )
 
+type testCase struct {
+	name    string
+	req     *types.CommandExecutionRequest
+	wantErr bool
+	check   func(t *testing.T, result *types.CommandExecutionResult)
+}
+
 func TestExecutor_Execute(t *testing.T) {
 	// Setup
 	cfg := config.Default()
 	log, _ := logger.New(logger.DefaultOptions())
 	exec := New(cfg, log)
 
-	tests := []struct {
-		name    string
-		req     *types.CommandExecutionRequest
-		wantErr bool
-		check   func(t *testing.T, result *types.CommandExecutionResult)
-	}{
+	tests := []testCase{
 		{
 			name: "simple echo command",
 			req: &types.CommandExecutionRequest{
@@ -39,23 +41,7 @@ func TestExecutor_Execute(t *testing.T) {
 				}
 			},
 		},
-		{
-			name: "command with timeout",
-			req: &types.CommandExecutionRequest{
-				Command: "sleep",
-				Args:    []string{"10"},
-				Timeout: "100ms",
-			},
-			wantErr: false,
-			check: func(t *testing.T, result *types.CommandExecutionResult) {
-				if !result.TimedOut {
-					t.Error("expected command to timeout")
-				}
-				if result.ErrorMessage != "command timed out" {
-					t.Errorf("expected timeout error message, got %s", result.ErrorMessage)
-				}
-			},
-		},
+		getTimeoutTestCase(),
 		{
 			name: "command not found",
 			req: &types.CommandExecutionRequest{

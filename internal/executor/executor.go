@@ -4,6 +4,7 @@ package executor
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,21 +15,21 @@ import (
 	"time"
 
 	"github.com/mjmorales/simple-mcp-runner/internal/config"
-	"github.com/mjmorales/simple-mcp-runner/internal/errors"
+	apperrors "github.com/mjmorales/simple-mcp-runner/internal/errors"
 	"github.com/mjmorales/simple-mcp-runner/internal/logger"
 	"github.com/mjmorales/simple-mcp-runner/pkg/types"
 )
 
-// Executor manages command execution with safety features
+// Executor manages command execution with safety features.
 type Executor struct {
-	config        *config.Config
-	logger        *logger.Logger
+	config         *config.Config
+	logger         *logger.Logger
 	activeCommands int32
-	mu            sync.RWMutex
-	semaphore     chan struct{}
+	mu             sync.RWMutex
+	semaphore      chan struct{}
 }
 
-// New creates a new executor instance
+// New creates a new executor instance.
 func New(cfg *config.Config, log *logger.Logger) *Executor {
 	maxConcurrent := cfg.Execution.MaxConcurrent
 	if maxConcurrent <= 0 {
@@ -42,7 +43,7 @@ func New(cfg *config.Config, log *logger.Logger) *Executor {
 	}
 }
 
-// Execute runs a command with safety checks and resource limits
+// Execute runs a command with safety checks and resource limits.
 func (e *Executor) Execute(ctx context.Context, req *types.CommandExecutionRequest) (*types.CommandExecutionResult, error) {
 	e.logger.WithFields(map[string]any{
 		"command": req.Command,
@@ -65,7 +66,7 @@ func (e *Executor) Execute(ctx context.Context, req *types.CommandExecutionReque
 	case e.semaphore <- struct{}{}:
 		defer func() { <-e.semaphore }()
 	case <-ctx.Done():
-		return nil, errors.TimeoutError("context cancelled while waiting for execution slot", "")
+		return nil, apperrors.TimeoutError("context cancelled while waiting for execution slot", "")
 	}
 
 	// Track active commands
@@ -74,21 +75,21 @@ func (e *Executor) Execute(ctx context.Context, req *types.CommandExecutionReque
 
 	// Parse timeout
 	timeout := e.getTimeout(req.Timeout)
-	
+
 	// Create context with timeout
 	execCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	// Execute the command
 	result := e.executeCommand(execCtx, req)
-	
+
 	// Log execution
 	e.logExecution(req, result)
 
 	return result, nil
 }
 
-// ExecuteConfigCommand executes a pre-configured command
+// ExecuteConfigCommand executes a pre-configured command.
 func (e *Executor) ExecuteConfigCommand(ctx context.Context, cmd *config.Command, workDir string) (*types.CommandExecutionResult, error) {
 	req := &types.CommandExecutionRequest{
 		Command: cmd.Command,
@@ -114,22 +115,22 @@ func (e *Executor) ExecuteConfigCommand(ctx context.Context, cmd *config.Command
 	return e.Execute(ctx, req)
 }
 
-// GetActiveCount returns the number of active command executions
+// GetActiveCount returns the number of active command executions.
 func (e *Executor) GetActiveCount() int {
 	return int(atomic.LoadInt32(&e.activeCommands))
 }
 
-// validateRequest validates the execution request
+// validateRequest validates the execution request.
 func (e *Executor) validateRequest(req *types.CommandExecutionRequest) error {
 	if req.Command == "" {
-		return errors.ValidationError("command is required", "command")
+		return apperrors.ValidationError("command is required", "command")
 	}
 
 	// Check command length
 	if e.config.Security.MaxCommandLength > 0 {
 		cmdLen := len(req.Command) + len(strings.Join(req.Args, " "))
 		if cmdLen > e.config.Security.MaxCommandLength {
-			return errors.ValidationError(
+			return apperrors.ValidationError(
 				fmt.Sprintf("command too long: %d > %d", cmdLen, e.config.Security.MaxCommandLength),
 				"command",
 			)
@@ -139,27 +140,27 @@ func (e *Executor) validateRequest(req *types.CommandExecutionRequest) error {
 	// Validate workdir if specified
 	if req.WorkDir != "" {
 		if !filepath.IsAbs(req.WorkDir) {
-			return errors.ValidationError("workdir must be an absolute path", "workdir")
+			return apperrors.ValidationError("workdir must be an absolute path", "workdir")
 		}
-		
+
 		info, err := os.Stat(req.WorkDir)
 		if err != nil {
-			return errors.NotFoundError(fmt.Sprintf("workdir not found: %v", err), req.WorkDir)
+			return apperrors.NotFoundError(fmt.Sprintf("workdir not found: %v", err), req.WorkDir)
 		}
-		
+
 		if !info.IsDir() {
-			return errors.ValidationError("workdir is not a directory", "workdir")
+			return apperrors.ValidationError("workdir is not a directory", "workdir")
 		}
 	}
 
 	return nil
 }
 
-// checkSecurity performs security checks on the command
+// checkSecurity performs security checks on the command.
 func (e *Executor) checkSecurity(req *types.CommandExecutionRequest) error {
 	// Check if command is allowed
 	if !e.config.IsCommandAllowed(req.Command) {
-		return errors.PermissionError(
+		return apperrors.PermissionError(
 			fmt.Sprintf("command not allowed: %s", req.Command),
 			req.Command,
 		)
@@ -167,7 +168,7 @@ func (e *Executor) checkSecurity(req *types.CommandExecutionRequest) error {
 
 	// Check if path is allowed
 	if req.WorkDir != "" && !e.config.IsPathAllowed(req.WorkDir) {
-		return errors.PermissionError(
+		return apperrors.PermissionError(
 			fmt.Sprintf("path not allowed: %s", req.WorkDir),
 			req.WorkDir,
 		)
@@ -177,10 +178,10 @@ func (e *Executor) checkSecurity(req *types.CommandExecutionRequest) error {
 	if e.config.Security.DisableShellExpansion {
 		dangerous := []string{";", "&&", "||", "|", "`", "$", "(", ")", "{", "}", "<", ">", "&"}
 		cmdStr := req.Command + " " + strings.Join(req.Args, " ")
-		
+
 		for _, char := range dangerous {
 			if strings.Contains(cmdStr, char) {
-				return errors.PermissionError(
+				return apperrors.PermissionError(
 					fmt.Sprintf("potentially dangerous character detected: %s", char),
 					"command",
 				)
@@ -191,7 +192,7 @@ func (e *Executor) checkSecurity(req *types.CommandExecutionRequest) error {
 	return nil
 }
 
-// getTimeout determines the timeout for command execution
+// getTimeout determines the timeout for command execution.
 func (e *Executor) getTimeout(requested string) time.Duration {
 	// Parse requested timeout
 	if requested != "" {
@@ -209,12 +210,12 @@ func (e *Executor) getTimeout(requested string) time.Duration {
 	return e.parseTimeoutConfig(e.config.Execution.DefaultTimeout, 30*time.Second)
 }
 
-// parseTimeoutConfig parses a timeout configuration value
+// parseTimeoutConfig parses a timeout configuration value.
 func (e *Executor) parseTimeoutConfig(value string, defaultValue time.Duration) time.Duration {
 	if value == "" {
 		return defaultValue
 	}
-	
+
 	dur, err := time.ParseDuration(value)
 	if err != nil {
 		e.logger.WithFields(map[string]any{
@@ -224,11 +225,11 @@ func (e *Executor) parseTimeoutConfig(value string, defaultValue time.Duration) 
 		}).Warn("invalid timeout configuration")
 		return defaultValue
 	}
-	
+
 	return dur
 }
 
-// executeCommand performs the actual command execution
+// executeCommand performs the actual command execution.
 func (e *Executor) executeCommand(ctx context.Context, req *types.CommandExecutionRequest) *types.CommandExecutionResult {
 	startTime := time.Now()
 	result := &types.CommandExecutionResult{
@@ -238,7 +239,7 @@ func (e *Executor) executeCommand(ctx context.Context, req *types.CommandExecuti
 
 	// Create command
 	cmd := exec.CommandContext(ctx, req.Command, req.Args...)
-	
+
 	// Set working directory
 	if req.WorkDir != "" {
 		cmd.Dir = req.WorkDir
@@ -252,7 +253,7 @@ func (e *Executor) executeCommand(ctx context.Context, req *types.CommandExecuti
 	// Create buffers for output with size limits
 	stdout := &limitedBuffer{limit: e.config.Execution.MaxOutputSize}
 	stderr := &limitedBuffer{limit: e.config.Execution.MaxOutputSize}
-	
+
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
@@ -279,9 +280,10 @@ func (e *Executor) executeCommand(ctx context.Context, req *types.CommandExecuti
 		result.Duration = result.EndTime.Sub(startTime)
 		result.Stdout = stdout.String()
 		result.Stderr = stderr.String()
-		
+
 		if err != nil {
-			if exitErr, ok := err.(*exec.ExitError); ok {
+			exitErr := &exec.ExitError{}
+			if errors.As(err, &exitErr) {
 				result.ExitCode = exitErr.ExitCode()
 			} else {
 				result.ErrorMessage = err.Error()
@@ -289,32 +291,37 @@ func (e *Executor) executeCommand(ctx context.Context, req *types.CommandExecuti
 		} else {
 			result.ExitCode = 0
 		}
-		
+
 	case <-ctx.Done():
 		// Timeout or cancellation
 		result.TimedOut = true
 		result.EndTime = time.Now()
 		result.Duration = result.EndTime.Sub(startTime)
-		
+
 		// Try graceful termination first
 		if cmd.Process != nil {
-			cmd.Process.Signal(os.Interrupt)
-			
+			if err := cmd.Process.Signal(os.Interrupt); err != nil {
+				// Process might have already exited, which is fine
+				e.logger.Debug("failed to send interrupt signal", "error", err)
+			}
+
 			// Wait for kill timeout
 			killTimeout := e.parseTimeoutConfig(e.config.Execution.KillTimeout, 5*time.Second)
 			killTimer := time.NewTimer(killTimeout)
-			
+
 			select {
 			case <-done:
 				// Process terminated gracefully
 				killTimer.Stop()
 			case <-killTimer.C:
 				// Force kill
-				cmd.Process.Kill()
+				if err := cmd.Process.Kill(); err != nil {
+					e.logger.Debug("failed to kill process", "error", err)
+				}
 				<-done
 			}
 		}
-		
+
 		result.Stdout = stdout.String()
 		result.Stderr = stderr.String()
 		result.ErrorMessage = "command timed out"
@@ -323,7 +330,7 @@ func (e *Executor) executeCommand(ctx context.Context, req *types.CommandExecuti
 	return result
 }
 
-// logExecution logs command execution details
+// logExecution logs command execution details.
 func (e *Executor) logExecution(req *types.CommandExecutionRequest, result *types.CommandExecutionResult) {
 	fields := map[string]any{
 		"command":   req.Command,
@@ -362,7 +369,7 @@ func (e *Executor) logExecution(req *types.CommandExecutionRequest, result *type
 	}
 }
 
-// limitedBuffer is a buffer that limits the amount of data stored
+// limitedBuffer is a buffer that limits the amount of data stored.
 type limitedBuffer struct {
 	buf   bytes.Buffer
 	limit int64
@@ -398,7 +405,7 @@ func (b *limitedBuffer) String() string {
 	return b.buf.String()
 }
 
-// truncateString truncates a string to the specified length
+// truncateString truncates a string to the specified length.
 func truncateString(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
@@ -406,12 +413,12 @@ func truncateString(s string, maxLen int) string {
 	return s[:maxLen] + "... (truncated)"
 }
 
-// CommandBuilder helps build command execution requests
+// CommandBuilder helps build command execution requests.
 type CommandBuilder struct {
 	req *types.CommandExecutionRequest
 }
 
-// NewCommandBuilder creates a new command builder
+// NewCommandBuilder creates a new command builder.
 func NewCommandBuilder(command string) *CommandBuilder {
 	return &CommandBuilder{
 		req: &types.CommandExecutionRequest{
@@ -420,25 +427,25 @@ func NewCommandBuilder(command string) *CommandBuilder {
 	}
 }
 
-// WithArgs sets the command arguments
+// WithArgs sets the command arguments.
 func (b *CommandBuilder) WithArgs(args ...string) *CommandBuilder {
 	b.req.Args = args
 	return b
 }
 
-// WithWorkDir sets the working directory
+// WithWorkDir sets the working directory.
 func (b *CommandBuilder) WithWorkDir(dir string) *CommandBuilder {
 	b.req.WorkDir = dir
 	return b
 }
 
-// WithTimeout sets the timeout
+// WithTimeout sets the timeout.
 func (b *CommandBuilder) WithTimeout(timeout string) *CommandBuilder {
 	b.req.Timeout = timeout
 	return b
 }
 
-// WithEnv adds environment variables
+// WithEnv adds environment variables.
 func (b *CommandBuilder) WithEnv(env map[string]string) *CommandBuilder {
 	envList := make([]string, 0, len(env))
 	for k, v := range env {
@@ -448,7 +455,7 @@ func (b *CommandBuilder) WithEnv(env map[string]string) *CommandBuilder {
 	return b
 }
 
-// Build returns the command execution request
+// Build returns the command execution request.
 func (b *CommandBuilder) Build() *types.CommandExecutionRequest {
 	return b.req
 }

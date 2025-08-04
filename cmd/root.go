@@ -9,13 +9,13 @@ import (
 )
 
 var (
-	// Version information (set by build flags)
+	// Version information (set by build flags).
 	Version   = "dev"
 	Commit    = "none"
 	BuildTime = "unknown"
 )
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "simple-mcp-runner",
 	Short: "A Model Context Protocol (MCP) server for local command execution",
@@ -57,5 +57,3 @@ func init() {
 	// Remove unused flag
 	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
-
-

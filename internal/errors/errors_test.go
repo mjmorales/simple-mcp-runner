@@ -8,19 +8,19 @@ import (
 
 func TestNew(t *testing.T) {
 	err := New(ErrorTypeValidation, "test error")
-	
+
 	if err.Type != ErrorTypeValidation {
 		t.Errorf("expected type %s, got %s", ErrorTypeValidation, err.Type)
 	}
-	
+
 	if err.Message != "test error" {
 		t.Errorf("expected message 'test error', got %s", err.Message)
 	}
-	
+
 	if err.Context == nil {
 		t.Error("expected context to be initialized")
 	}
-	
+
 	if len(err.Stack) == 0 {
 		t.Error("expected stack trace to be captured")
 	}
@@ -29,25 +29,25 @@ func TestNew(t *testing.T) {
 func TestWrap(t *testing.T) {
 	originalErr := errors.New("original error")
 	wrapped := Wrap(originalErr, ErrorTypeExecution, "wrapped error")
-	
+
 	if wrapped.Type != ErrorTypeExecution {
 		t.Errorf("expected type %s, got %s", ErrorTypeExecution, wrapped.Type)
 	}
-	
+
 	if wrapped.Message != "wrapped error" {
 		t.Errorf("expected message 'wrapped error', got %s", wrapped.Message)
 	}
-	
-	if wrapped.Err != originalErr {
+
+	if !errors.Is(wrapped.Err, originalErr) {
 		t.Error("expected original error to be preserved")
 	}
-	
+
 	// Test wrapping nil
 	nilWrapped := Wrap(nil, ErrorTypeExecution, "wrapped nil")
 	if nilWrapped != nil {
 		t.Error("wrapping nil should return nil")
 	}
-	
+
 	// Test wrapping our error type
 	doubleWrapped := Wrap(wrapped, ErrorTypeInternal, "double wrapped")
 	if doubleWrapped.Type != ErrorTypeExecution {
@@ -60,17 +60,17 @@ func TestWrap(t *testing.T) {
 
 func TestError_WithContext(t *testing.T) {
 	err := New(ErrorTypeValidation, "test error")
-	err.WithContext("field", "username").
+	_ = err.WithContext("field", "username").
 		WithContext("value", "invalid-user")
-	
+
 	if val, ok := err.GetContext("field"); !ok || val != "username" {
 		t.Error("expected context 'field' to be 'username'")
 	}
-	
+
 	if val, ok := err.GetContext("value"); !ok || val != "invalid-user" {
 		t.Error("expected context 'value' to be 'invalid-user'")
 	}
-	
+
 	// Test nil error
 	var nilErr *Error
 	result := nilErr.WithContext("key", "value")
@@ -86,8 +86,8 @@ func TestError_WithContextMap(t *testing.T) {
 		"value": "not-an-email",
 		"line":  42,
 	}
-	err.WithContextMap(ctx)
-	
+	_ = err.WithContextMap(ctx)
+
 	for k, v := range ctx {
 		if val, ok := err.GetContext(k); !ok || val != v {
 			t.Errorf("expected context %s to be %v", k, v)
@@ -119,7 +119,7 @@ func TestError_Error(t *testing.T) {
 			expected: "execution: command failed: exit code 1",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.err.Error()
@@ -135,16 +135,16 @@ func TestError_Is(t *testing.T) {
 	err1 := Wrap(baseErr, ErrorTypeExecution, "wrapped")
 	err2 := New(ErrorTypeExecution, "same type")
 	err3 := New(ErrorTypeValidation, "different type")
-	
+
 	// Test matching by type
 	if !err1.Is(err2) {
 		t.Error("expected errors with same type to match")
 	}
-	
+
 	if err1.Is(err3) {
 		t.Error("expected errors with different types not to match")
 	}
-	
+
 	// Test unwrapping
 	if !errors.Is(err1, baseErr) {
 		t.Error("expected wrapped error to match base error")
@@ -219,15 +219,15 @@ func TestHelperFunctions(t *testing.T) {
 			errType: ErrorTypeInternal,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.fn()
-			
+
 			if err.Type != tt.errType {
 				t.Errorf("expected error type %s, got %s", tt.errType, err.Type)
 			}
-			
+
 			if tt.checkCtx != nil {
 				tt.checkCtx(t, err)
 			}
@@ -237,17 +237,17 @@ func TestHelperFunctions(t *testing.T) {
 
 func TestError_StackTrace(t *testing.T) {
 	err := New(ErrorTypeInternal, "test error")
-	
+
 	stack := err.StackTrace()
 	if stack == "" {
 		t.Error("expected non-empty stack trace")
 	}
-	
+
 	// Should contain function names and line numbers
 	if !strings.Contains(stack, "TestError_StackTrace") {
 		t.Error("expected stack trace to contain test function name")
 	}
-	
+
 	// Test nil error
 	var nilErr *Error
 	if nilErr.StackTrace() != "" {
