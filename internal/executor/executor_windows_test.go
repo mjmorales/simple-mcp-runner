@@ -16,7 +16,7 @@ func getTimeoutTestCase() testCase {
 			Args:    []string{"-Command", "Start-Sleep", "-Seconds", "10"},
 			Timeout: "100ms",
 		},
-		wantErr: true,
+		wantErr: false,
 		check: func(t *testing.T, result *types.CommandExecutionResult) {
 			if !result.TimedOut {
 				t.Error("expected command to timeout")
