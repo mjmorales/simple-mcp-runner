@@ -49,3 +49,4 @@ build/
 # Configuration overrides (keep example)
 config.yaml
 !config.example.yaml
+.mcp.json
