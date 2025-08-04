@@ -49,3 +49,9 @@ build/
 # Configuration overrides (keep example)
 config.yaml
 !config.example.yaml
+.mcp.json
+
+# Node.js / NPM (for semantic-release)
+node_modules/
+package-lock.json
+yarn.lock
