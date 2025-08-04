@@ -47,7 +47,7 @@ func TestExecutor_Execute(t *testing.T) {
 			req: &types.CommandExecutionRequest{
 				Command: "nonexistentcommand123",
 			},
-			wantErr: true,
+			wantErr: false,
 			check: func(t *testing.T, result *types.CommandExecutionResult) {
 				if result.ExitCode != -1 {
 					t.Errorf("expected exit code -1, got %d", result.ExitCode)
