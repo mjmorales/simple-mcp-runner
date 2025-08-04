@@ -1,0 +1,173 @@
+# Simple MCP Runner Configuration Example
+# This file demonstrates all available configuration options
+
+# Application name (required)
+# This identifies your MCP server instance
+app: simple-mcp-runner
+
+# Configuration schema version (optional)
+# Useful for future compatibility
+version: "1.0"
+
+# Transport method (required)
+# Currently only "stdio" is supported for local communication
+transport: stdio
+
+# Custom command definitions (optional)
+# These commands are exposed as individual MCP tools
+commands:
+  # Example: Basic command
+  - name: list_files
+    description: List files in the current directory with details
+    command: ls
+    args: ["-la"]
+    
+  # Example: Command with working directory
+  - name: check_git_status
+    description: Check git repository status
+    command: git
+    args: ["status"]
+    workdir: /home/user/project
+    
+  # Example: Command with timeout
+  - name: quick_ping
+    description: Ping localhost with timeout
+    command: ping
+    args: ["-c", "3", "localhost"]
+    timeout: 5s
+    
+  # Example: Command with environment variables
+  - name: show_custom_env
+    description: Display environment with custom variables
+    command: env
+    env:
+      CUSTOM_VAR: "Hello from MCP"
+      DEBUG: "true"
+    
+  # Example: Command that allows additional arguments
+  - name: flexible_grep
+    description: Search for patterns in files (allows custom args)
+    command: grep
+    allow_args: true  # Client can provide additional arguments
+
+# Security configuration (optional but recommended)
+security:
+  # Maximum total command length (command + args)
+  # Prevents extremely long command strings
+  max_command_length: 1000
+  
+  # Disable shell expansion and special characters
+  # This prevents shell injection attacks
+  disable_shell_expansion: true
+  
+  # List of commands that are explicitly blocked
+  # These commands cannot be executed regardless of other settings
+  blocked_commands:
+    - rm        # File deletion
+    - dd        # Disk operations
+    - mkfs      # Filesystem creation
+    - fdisk     # Disk partitioning
+    - shutdown  # System shutdown
+    - reboot    # System reboot
+    - systemctl # System service control
+    - service   # Service management
+    - kill      # Process termination
+    - killall   # Kill processes by name
+    - pkill     # Kill processes by pattern
+    
+  # Alternative: Use an allow-list approach
+  # If specified, ONLY these commands can be executed
+  # allowed_commands:
+  #   - echo
+  #   - ls
+  #   - cat
+  #   - grep
+  #   - find
+  #   - curl
+  #   - git
+  
+  # Restrict execution to specific directory paths
+  # Commands can only be executed within these directories
+  # allowed_paths:
+  #   - /home/user/safe-directory
+  #   - /tmp
+  #   - /var/log
+
+# Execution limits and timeouts (optional)
+execution:
+  # Default timeout for all commands
+  # Can be overridden per command
+  default_timeout: 30s
+  
+  # Maximum allowed timeout
+  # Prevents commands from running indefinitely
+  max_timeout: 5m
+  
+  # Maximum number of concurrent command executions
+  # Prevents resource exhaustion
+  max_concurrent: 10
+  
+  # Maximum size of command output (stdout + stderr)
+  # Prevents memory exhaustion from commands with large output
+  max_output_size: 10485760  # 10MB in bytes
+  
+  # Time to wait after SIGTERM before sending SIGKILL
+  # Allows graceful shutdown of commands
+  kill_timeout: 5s
+
+# Logging configuration (optional)
+logging:
+  # Log level: debug, info, warn, error
+  # Debug includes detailed execution information
+  level: info
+  
+  # Output format: text or json
+  # JSON is useful for log aggregation systems
+  format: text
+  
+  # Where to write logs: stderr, stdout, or file path
+  # Use stderr to keep stdout clean for MCP communication
+  output: stderr
+  
+  # Include source file and line numbers in logs
+  # Useful for debugging but adds overhead
+  include_source: false
+
+# Command discovery configuration (optional)
+discovery:
+  # Additional paths to search for commands
+  # These are added to the system PATH
+  additional_paths:
+    - /usr/local/bin
+    - /opt/homebrew/bin
+    - ~/bin
+    
+  # Paths to exclude from command discovery
+  # Useful for avoiding system directories
+  exclude_paths:
+    - /System
+    - /private
+    
+  # Maximum number of commands to return in discovery
+  # Prevents overwhelming results
+  max_results: 100
+  
+  # Common commands to prioritize in discovery results
+  # These appear first when using wildcard patterns
+  common_commands:
+    - ls
+    - cat
+    - echo
+    - grep
+    - find
+    - sed
+    - awk
+    - curl
+    - wget
+    - git
+    - docker
+    - npm
+    - node
+    - python
+    - go
+    - make
