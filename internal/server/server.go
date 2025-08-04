@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -239,25 +240,51 @@ func (s *Server) registerConfigCommand(cmd config.Command) error {
 	}
 
 	handler := func(ctx context.Context, ss *mcp.ServerSession, params *mcp.CallToolParamsFor[ConfigCommandParams]) (*mcp.CallToolResultFor[types.CommandExecutionResult], error) {
+		// Create a copy of the command to avoid modifying the original
+		execCmd := cmdCopy
+		
+		// If allow_args is true and client provided args, append them
+		if execCmd.AllowArgs && len(params.Arguments.Args) > 0 {
+			// Append client args to configured args
+			execCmd.Args = append(execCmd.Args, params.Arguments.Args...)
+		}
+		
 		// Execute the configured command
-		result, err := s.executor.ExecuteConfigCommand(ctx, &cmdCopy, params.Arguments.WorkDir)
+		result, err := s.executor.ExecuteConfigCommand(ctx, &execCmd, params.Arguments.WorkDir)
 		if err != nil {
 			s.logger.WithError(err).Error("config command execution failed",
-				"command", cmdCopy.Name,
+				"command", execCmd.Name,
 			)
 
 			// Return error result instead of failing
+			errorContent := []mcp.Content{
+				&mcp.TextContent{
+					Text: fmt.Sprintf("Command execution failed: %s", err.Error()),
+				},
+			}
+			
 			return &mcp.CallToolResultFor[types.CommandExecutionResult]{
+				Content: errorContent,
 				StructuredContent: types.CommandExecutionResult{
 					ExitCode:     -1,
 					ErrorMessage: err.Error(),
 					StartTime:    time.Now(),
 					EndTime:      time.Now(),
 				},
+				IsError: true,
 			}, nil
 		}
 
+		// Create content array with text representation
+		content := []mcp.Content{
+			&mcp.TextContent{
+				Text: fmt.Sprintf("Command executed successfully.\nStdout: %s\nStderr: %s\nExit Code: %d", 
+					result.Stdout, result.Stderr, result.ExitCode),
+			},
+		}
+
 		return &mcp.CallToolResultFor[types.CommandExecutionResult]{
+			Content:           content,
 			StructuredContent: *result,
 		}, nil
 	}
@@ -286,7 +313,20 @@ func (s *Server) registerDiscoveryTool() error {
 			return nil, err
 		}
 
+		// Create content array with text representation
+		var commandList []string
+		for _, cmd := range result.Commands {
+			commandList = append(commandList, fmt.Sprintf("%s: %s (%s)", cmd.Name, cmd.Description, cmd.Path))
+		}
+		
+		content := []mcp.Content{
+			&mcp.TextContent{
+				Text: fmt.Sprintf("Found %d commands:\n%s", result.TotalFound, strings.Join(commandList, "\n")),
+			},
+		}
+
 		return &mcp.CallToolResultFor[types.CommandDiscoveryResult]{
+			Content:           content,
 			StructuredContent: *result,
 		}, nil
 	}
@@ -318,17 +358,34 @@ func (s *Server) registerExecutionTool() error {
 			s.logger.WithError(err).Error("command execution failed")
 
 			// Return error result instead of failing
+			errorContent := []mcp.Content{
+				&mcp.TextContent{
+					Text: fmt.Sprintf("Command execution failed: %s", err.Error()),
+				},
+			}
+			
 			return &mcp.CallToolResultFor[types.CommandExecutionResult]{
+				Content: errorContent,
 				StructuredContent: types.CommandExecutionResult{
 					ExitCode:     -1,
 					ErrorMessage: err.Error(),
 					StartTime:    time.Now(),
 					EndTime:      time.Now(),
 				},
+				IsError: true,
 			}, nil
 		}
 
+		// Create content array with text representation
+		content := []mcp.Content{
+			&mcp.TextContent{
+				Text: fmt.Sprintf("Command executed successfully.\nStdout: %s\nStderr: %s\nExit Code: %d", 
+					result.Stdout, result.Stderr, result.ExitCode),
+			},
+		}
+
 		return &mcp.CallToolResultFor[types.CommandExecutionResult]{
+			Content:           content,
 			StructuredContent: *result,
 		}, nil
 	}
