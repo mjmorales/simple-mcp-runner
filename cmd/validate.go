@@ -24,9 +24,13 @@ Example:
   simple-mcp-runner validate --config config.yaml`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Check if config file is specified
-		cfgFile, _ := cmd.Flags().GetString("config")
+		cfgFile := configFile
 		if cfgFile == "" {
-			return fmt.Errorf("configuration file must be specified with --config flag")
+			// Try default location
+			cfgFile = GetDefaultConfigPath()
+			if cfgFile == "" || !fileExists(cfgFile) {
+				return fmt.Errorf("configuration file must be specified with --config flag")
+			}
 		}
 
 		// Check if file exists
@@ -79,11 +83,10 @@ Example:
 
 func init() {
 	rootCmd.AddCommand(validateCmd)
+}
 
-	// Add config flag
-	validateCmd.Flags().StringP("config", "c", "", "path to configuration file")
-	if err := validateCmd.MarkFlagRequired("config"); err != nil {
-		// This should never fail for a valid flag name
-		panic(fmt.Sprintf("failed to mark config flag as required: %v", err))
-	}
+// fileExists checks if a file exists.
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }

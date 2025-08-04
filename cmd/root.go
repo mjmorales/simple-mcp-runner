@@ -13,6 +13,9 @@ var (
 	Version   = "dev"
 	Commit    = "none"
 	BuildTime = "unknown"
+
+	// configFile is the path to the configuration file
+	configFile string
 )
 
 // rootCmd represents the base command when called without any subcommands.
@@ -50,10 +53,8 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.simple-mcp-runner.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "config file (default is ~/.simple-mcp-runner.yaml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	// Remove unused flag
-	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

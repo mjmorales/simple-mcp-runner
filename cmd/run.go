@@ -12,9 +12,8 @@ import (
 )
 
 var (
-	configFile string
-	logLevel   string
-	logFormat  string
+	logLevel  string
+	logFormat string
 )
 
 // runCmd represents the run command.
@@ -46,9 +45,6 @@ Example:
 func init() {
 	rootCmd.AddCommand(runCmd)
 
-	// Configuration flags
-	runCmd.Flags().StringVarP(&configFile, "config", "c", "", "path to configuration file (uses defaults if not specified)")
-
 	// Logging flags
 	runCmd.Flags().StringVar(&logLevel, "log-level", "info", "log level (debug, info, warn, error)")
 	runCmd.Flags().StringVar(&logFormat, "log-format", "text", "log format (text, json)")
@@ -79,8 +75,23 @@ func runServer(cmd *cobra.Command, args []string) error {
 		}
 		log.Info("loaded configuration", "file", configFile)
 	} else {
-		cfg = config.Default()
-		log.Info("using default configuration")
+		// Try to load from default location
+		defaultPath := GetDefaultConfigPath()
+		if defaultPath != "" {
+			if _, err := os.Stat(defaultPath); err == nil {
+				cfg, err = config.Load(defaultPath)
+				if err != nil {
+					return fmt.Errorf("failed to load default config: %w", err)
+				}
+				log.Info("loaded default configuration", "file", defaultPath)
+			} else {
+				cfg = config.Default()
+				log.Info("using built-in default configuration")
+			}
+		} else {
+			cfg = config.Default()
+			log.Info("using built-in default configuration")
+		}
 	}
 
 	// Override logging config from CLI flags if provided
