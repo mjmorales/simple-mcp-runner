@@ -1,7 +1,6 @@
 module github.com/mjmorales/simple-mcp-runner
 
-go 1.21
-
+go 1.24
 
 require (
 	github.com/modelcontextprotocol/go-sdk v0.2.0
