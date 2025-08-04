@@ -189,7 +189,7 @@ func (d *Discoverer) discoverInPath(path string, req *types.CommandDiscoveryRequ
 		return nil
 	}
 
-	var commands []types.CommandInfo
+	commands := make([]types.CommandInfo, 0)
 
 	for _, entry := range entries {
 		if entry.IsDir() {
