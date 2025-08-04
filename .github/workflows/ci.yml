@@ -41,7 +41,13 @@ jobs:
         go-version: '1.24'
     
     - name: Run tests
-      run: go test -v -race -coverprofile=coverage.out ./...
+      run: |
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          go test -v -race ./...
+        else
+          go test -v -race -coverprofile=coverage.out ./...
+        fi
+      shell: bash
     
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest'
