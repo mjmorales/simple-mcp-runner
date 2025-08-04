@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -264,6 +265,10 @@ func TestIsCommandAllowed(t *testing.T) {
 }
 
 func TestIsPathAllowed(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping Unix path tests on Windows")
+	}
+	
 	tests := []struct {
 		name     string
 		config   *Config

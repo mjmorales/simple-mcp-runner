@@ -30,6 +30,9 @@ func TestDiscoverer_Discover(t *testing.T) {
 			},
 			wantErr: false,
 			check: func(t *testing.T, result *types.CommandDiscoveryResult) {
+				if runtime.GOOS == "windows" {
+					t.Skip("Skipping Unix command discovery test on Windows")
+				}
 				if len(result.Commands) == 0 {
 					t.Error("expected to find at least one command")
 				}
@@ -53,6 +56,9 @@ func TestDiscoverer_Discover(t *testing.T) {
 			},
 			wantErr: false,
 			check: func(t *testing.T, result *types.CommandDiscoveryResult) {
+				if runtime.GOOS == "windows" {
+					t.Skip("Skipping Unix command discovery test on Windows")
+				}
 				found := false
 				for _, cmd := range result.Commands {
 					if cmd.Name == "echo" {
@@ -94,6 +100,9 @@ func TestDiscoverer_Discover(t *testing.T) {
 			},
 			wantErr: false,
 			check: func(t *testing.T, result *types.CommandDiscoveryResult) {
+				if runtime.GOOS == "windows" {
+					t.Skip("Skipping Unix command discovery test on Windows")
+				}
 				for _, cmd := range result.Commands {
 					if cmd.Name == "ls" && cmd.Description == "" {
 						t.Error("expected description for ls command")
