@@ -1,0 +1,61 @@
+version: 2
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gosec
+    - unconvert
+    - misspell
+    - unparam
+    - nakedret
+    - prealloc
+    - gocritic
+    - gocyclo
+    - bodyclose
+
+linters-settings:
+  gocyclo:
+    min-complexity: 20
+  gosec:
+    excludes:
+      - G304  # File path provided by user (needed for config loading)
+      - G204  # Subprocess launched with user input (core functionality)
+      - G306  # Write file permissions (config file needs to be readable)
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+        - prealloc
+    
+    # Core functionality requires these operations
+    - path: internal/executor/executor.go
+      linters:
+        - gosec
+      text: "G204:"
+    
+    - path: internal/config/config.go
+      linters:
+        - gosec
+      text: "G304:"
+    
+    - path: cmd/init.go
+      linters:
+        - gosec
+      text: "G306:"
+    
+    - path: cmd/
+      linters:
+        - gocyclo
+  
+  max-issues-per-linter: 50
+  max-same-issues: 10
