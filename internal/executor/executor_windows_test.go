@@ -12,8 +12,8 @@ func getTimeoutTestCase() testCase {
 	return testCase{
 		name: "command with timeout",
 		req: &types.CommandExecutionRequest{
-			Command: "timeout",
-			Args:    []string{"/T", "10"},
+			Command: "powershell",
+			Args:    []string{"-Command", "Start-Sleep", "-Seconds", "10"},
 			Timeout: "100ms",
 		},
 		wantErr: false,
