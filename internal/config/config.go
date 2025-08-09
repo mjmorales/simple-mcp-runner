@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	apperrors "github.com/mjmorales/simple-mcp-runner/internal/errors"
+	"github.com/mjmorales/simple-mcp-runner/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -176,19 +176,19 @@ func Load(filename string) (*Config, error) {
 
 	// Check if file exists
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		return nil, apperrors.ConfigurationError(fmt.Sprintf("config file not found: %s", filename))
+		return nil, errors.ConfigurationError(fmt.Sprintf("config file not found: %s", filename))
 	}
 
 	// Read file
 	// #nosec G304 - Configuration files are loaded from user-specified paths
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, apperrors.Wrap(err, apperrors.ErrorTypeConfiguration, "failed to read config file")
+		return nil, errors.Wrap(err, errors.ErrorTypeConfiguration, "failed to read config file")
 	}
 
 	// Parse YAML
 	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, apperrors.Wrap(err, apperrors.ErrorTypeConfiguration, "failed to parse YAML")
+		return nil, errors.Wrap(err, errors.ErrorTypeConfiguration, "failed to parse YAML")
 	}
 
 	// Validate
@@ -203,16 +203,16 @@ func Load(filename string) (*Config, error) {
 func (c *Config) Validate() error {
 	// Validate app name
 	if c.App == "" {
-		return apperrors.ValidationError("app name is required", "app")
+		return errors.ValidationError("app name is required", "app")
 	}
 
 	if len(c.App) > 100 {
-		return apperrors.ValidationError("app name too long (max 100 chars)", "app")
+		return errors.ValidationError("app name too long (max 100 chars)", "app")
 	}
 
 	// Validate transport
 	if c.Transport != "stdio" {
-		return apperrors.ValidationError("only 'stdio' transport is supported", "transport")
+		return errors.ValidationError("only 'stdio' transport is supported", "transport")
 	}
 
 	// Validate commands
@@ -223,7 +223,7 @@ func (c *Config) Validate() error {
 		}
 
 		if seen[cmd.Name] {
-			return apperrors.ValidationError(fmt.Sprintf("duplicate command name: %s", cmd.Name), "commands")
+			return errors.ValidationError(fmt.Sprintf("duplicate command name: %s", cmd.Name), "commands")
 		}
 		seen[cmd.Name] = true
 	}
@@ -251,11 +251,11 @@ func (c *Config) validateCommand(cmd Command, index int) error {
 
 	// Validate name
 	if cmd.Name == "" {
-		return apperrors.ValidationError("command name is required", field+".name")
+		return errors.ValidationError("command name is required", field+".name")
 	}
 
 	if !isValidCommandName(cmd.Name) {
-		return apperrors.ValidationError(
+		return errors.ValidationError(
 			"command name must be alphanumeric with underscores (1-50 chars)",
 			field+".name",
 		)
@@ -263,22 +263,22 @@ func (c *Config) validateCommand(cmd Command, index int) error {
 
 	// Validate description
 	if cmd.Description == "" {
-		return apperrors.ValidationError("command description is required", field+".description")
+		return errors.ValidationError("command description is required", field+".description")
 	}
 
 	if len(cmd.Description) > 500 {
-		return apperrors.ValidationError("command description too long (max 500 chars)", field+".description")
+		return errors.ValidationError("command description too long (max 500 chars)", field+".description")
 	}
 
 	// Validate command
 	if cmd.Command == "" {
-		return apperrors.ValidationError("command is required", field+".command")
+		return errors.ValidationError("command is required", field+".command")
 	}
 
 	// Validate timeout if specified
 	if cmd.Timeout != "" {
 		if _, err := time.ParseDuration(cmd.Timeout); err != nil {
-			return apperrors.ValidationError(
+			return errors.ValidationError(
 				fmt.Sprintf("invalid timeout format: %v", err),
 				field+".timeout",
 			)
@@ -288,7 +288,7 @@ func (c *Config) validateCommand(cmd Command, index int) error {
 	// Validate workdir if specified
 	if cmd.WorkDir != "" {
 		if !filepath.IsAbs(cmd.WorkDir) {
-			return apperrors.ValidationError("workdir must be an absolute path", field+".workdir")
+			return errors.ValidationError("workdir must be an absolute path", field+".workdir")
 		}
 	}
 
@@ -298,13 +298,13 @@ func (c *Config) validateCommand(cmd Command, index int) error {
 func (c *Config) validateSecurity() error {
 	// Validate max command length
 	if c.Security.MaxCommandLength < 0 {
-		return apperrors.ValidationError("max_command_length cannot be negative", "security.max_command_length")
+		return errors.ValidationError("max_command_length cannot be negative", "security.max_command_length")
 	}
 
 	// Validate allowed paths
 	for i, path := range c.Security.AllowedPaths {
 		if !filepath.IsAbs(path) {
-			return apperrors.ValidationError(
+			return errors.ValidationError(
 				fmt.Sprintf("allowed_path must be absolute: %s", path),
 				fmt.Sprintf("security.allowed_paths[%d]", i),
 			)
@@ -318,7 +318,7 @@ func (c *Config) validateExecution() error {
 	// Validate timeouts
 	if c.Execution.DefaultTimeout != "" {
 		if _, err := time.ParseDuration(c.Execution.DefaultTimeout); err != nil {
-			return apperrors.ValidationError(
+			return errors.ValidationError(
 				fmt.Sprintf("invalid default_timeout: %v", err),
 				"execution.default_timeout",
 			)
@@ -328,7 +328,7 @@ func (c *Config) validateExecution() error {
 	if c.Execution.MaxTimeout != "" {
 		maxDur, err := time.ParseDuration(c.Execution.MaxTimeout)
 		if err != nil {
-			return apperrors.ValidationError(
+			return errors.ValidationError(
 				fmt.Sprintf("invalid max_timeout: %v", err),
 				"execution.max_timeout",
 			)
@@ -336,7 +336,7 @@ func (c *Config) validateExecution() error {
 
 		// Ensure max timeout is reasonable
 		if maxDur > 1*time.Hour {
-			return apperrors.ValidationError(
+			return errors.ValidationError(
 				"max_timeout cannot exceed 1 hour",
 				"execution.max_timeout",
 			)
@@ -345,12 +345,12 @@ func (c *Config) validateExecution() error {
 
 	// Validate max concurrent
 	if c.Execution.MaxConcurrent < 0 {
-		return apperrors.ValidationError("max_concurrent cannot be negative", "execution.max_concurrent")
+		return errors.ValidationError("max_concurrent cannot be negative", "execution.max_concurrent")
 	}
 
 	// Validate max output size
 	if c.Execution.MaxOutputSize < 0 {
-		return apperrors.ValidationError("max_output_size cannot be negative", "execution.max_output_size")
+		return errors.ValidationError("max_output_size cannot be negative", "execution.max_output_size")
 	}
 
 	return nil
@@ -367,7 +367,7 @@ func (c *Config) validateLogging() error {
 		}
 	}
 	if !valid {
-		return apperrors.ValidationError(
+		return errors.ValidationError(
 			"invalid log level (must be: debug, info, warn, error)",
 			"logging.level",
 		)
@@ -383,7 +383,7 @@ func (c *Config) validateLogging() error {
 		}
 	}
 	if !valid {
-		return apperrors.ValidationError(
+		return errors.ValidationError(
 			"invalid log format (must be: text, json)",
 			"logging.format",
 		)

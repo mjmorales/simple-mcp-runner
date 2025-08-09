@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/mjmorales/simple-mcp-runner/internal/config"
-	apperrors "github.com/mjmorales/simple-mcp-runner/internal/errors"
+	"github.com/mjmorales/simple-mcp-runner/pkg/config"
+	apperrors "github.com/mjmorales/simple-mcp-runner/pkg/errors"
 	"github.com/mjmorales/simple-mcp-runner/internal/logger"
 	"github.com/mjmorales/simple-mcp-runner/pkg/types"
 )

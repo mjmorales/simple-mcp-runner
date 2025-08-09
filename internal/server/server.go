@@ -12,9 +12,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mjmorales/simple-mcp-runner/internal/config"
+	"github.com/mjmorales/simple-mcp-runner/pkg/config"
 	"github.com/mjmorales/simple-mcp-runner/internal/discovery"
-	apperrors "github.com/mjmorales/simple-mcp-runner/internal/errors"
+	apperrors "github.com/mjmorales/simple-mcp-runner/pkg/errors"
 	"github.com/mjmorales/simple-mcp-runner/internal/executor"
 	"github.com/mjmorales/simple-mcp-runner/internal/logger"
 	"github.com/mjmorales/simple-mcp-runner/pkg/types"

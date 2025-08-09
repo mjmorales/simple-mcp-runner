@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mjmorales/simple-mcp-runner/internal/config"
+	"github.com/mjmorales/simple-mcp-runner/pkg/config"
 	"github.com/mjmorales/simple-mcp-runner/internal/logger"
 	"github.com/mjmorales/simple-mcp-runner/pkg/types"
 )
