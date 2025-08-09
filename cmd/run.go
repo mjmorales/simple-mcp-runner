@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mjmorales/simple-mcp-runner/internal/config"
+	"github.com/mjmorales/simple-mcp-runner/pkg/config"
 	"github.com/mjmorales/simple-mcp-runner/internal/logger"
 	"github.com/mjmorales/simple-mcp-runner/internal/server"
 	"github.com/spf13/cobra"
@@ -69,7 +69,7 @@ func runServer(cmd *cobra.Command, args []string) error {
 	// Load configuration
 	var cfg *config.Config
 	if configFile != "" {
-		cfg, err = config.Load(configFile)
+		cfg, err = config.LoadFromFile(configFile)
 		if err != nil {
 			return fmt.Errorf("failed to load config: %w", err)
 		}
@@ -79,7 +79,7 @@ func runServer(cmd *cobra.Command, args []string) error {
 		defaultPath := GetDefaultConfigPath()
 		if defaultPath != "" {
 			if _, err := os.Stat(defaultPath); err == nil {
-				cfg, err = config.Load(defaultPath)
+				cfg, err = config.LoadFromFile(defaultPath)
 				if err != nil {
 					return fmt.Errorf("failed to load default config: %w", err)
 				}
